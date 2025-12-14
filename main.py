@@ -15,7 +15,7 @@ import google.generativeai as genai
 
 # --- INTEGRASI GOOGLE GEMINI AI ---
 # Dapatkan API Key gratis di: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY = "AIzaSyAgochpwsh1qgVJCxBB5AetalysvLO1Odc" 
+GEMINI_API_KEY = "INI-DIISI-API-SEHARUSNYA" 
 
 AI_AVAILABLE = False
 try:
@@ -2774,3 +2774,4 @@ class MasterGame:
 if __name__ == "__main__":
     game = MasterGame()
     game.run()
+
