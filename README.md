@@ -1,4 +1,5 @@
 # Harvest Arena: Isekai Knight Saga
+[![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://python.org)
 
 Game RPG **Farming + Battle** berbasis **Python (Pygame)** dengan penerapan **Pemrograman Berorientasi Objek (PBO)** dan integrasi **Generative AI (Google Gemini)** untuk sistem quest dinamis.
 
