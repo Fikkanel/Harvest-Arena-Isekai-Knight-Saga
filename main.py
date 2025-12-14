@@ -15,7 +15,7 @@ import google.generativeai as genai
 
 # --- INTEGRASI GOOGLE GEMINI AI ---
 # Dapatkan API Key gratis di: https://aistudio.google.com/app/apikey
-GEMINI_API_KEY = "AIzaSyCd-4460UAe3CBN7JWOxmZy07eE3dJNrcE" 
+GEMINI_API_KEY = "AIzaSyAgochpwsh1qgVJCxBB5AetalysvLO1Odc" 
 
 AI_AVAILABLE = False
 try:
@@ -404,31 +404,32 @@ class PlayerStats:
     def _fetch_ai_quest_worker(self):
         """Worker thread untuk memanggil Gemini API."""
         try:
-            # --- PROMPT AI YANG LEBIH KETAT & BAHASA INDONESIA ---
+            # --- PROMPT AI DIPERKETAT UNTUK FOKUS PANEN DAN KILL ---
             prompt = f"""
-            You are a quest generator for a survival RPG game where the player is ALONE.
-            Context: The player is a lone survivor in the wild. 
-            There are NO other NPCs (NO chefs, NO kings, NO villagers).
+            You are a strict quest generator API for a survival RPG.
             
+            Game Context: A solitary survival RPG.
             Current Player Level: {self.level}
             
-            Task: Generate a simple quest based on these available resources:
-            - Targets: Slime, Golem, Grape, Mushroom, Potato, Carrot
+            STRICT INSTRUCTION: Generate a quest ONLY for 'harvest' or 'kill'.
             
-            Response MUST be strictly valid JSON format like this:
+            ALLOWED TARGETS (Exact spelling required):
+            - For 'harvest': Grape, Mushroom, Potato, Carrot
+            - For 'kill': Slime, Golem
+            
+            Response Format (JSON ONLY):
             {{
-                "desc": "Kumpulkan 5 Jamur untuk bertahan hidup",
-                "target_val": 5,
-                "type": "harvest", 
-                "target_name": "Mushroom"
+                "desc": "Singkat, Padat, Bahasa Indonesia (contoh: Panen 5 Anggur)",
+                "target_val": <integer 3-10>,
+                "type": "<harvest OR kill>",
+                "target_name": "<Must be one of the ALLOWED TARGETS>"
             }}
             
-            Constraints:
-            1. 'type' must be "harvest" or "kill".
-            2. 'target_name' must be exactly one of the targets listed above (Must be English).
-            3. 'desc' MUST be in BAHASA INDONESIA. Use phrases like "Kumpulkan stok makanan", "Bersihkan area", "Cari sumber daya".
-            4. 'desc' must NOT mention any other characters (chef, king, etc.).
-            5. 'target_val' between 3 and 10.
+            RULES:
+            1. NO story, NO flavor text in JSON, NO other characters.
+            2. 'type' MUST be exactly "harvest" or "kill".
+            3. 'desc' MUST be in BAHASA INDONESIA.
+            4. 'target_name' MUST be one of the allowed targets exactly.
             """
             
             response = AI_MODEL.generate_content(prompt)
@@ -1968,32 +1969,72 @@ class MasterGame:
             overlay.fill((10, 10, 30))
             SCREEN.blit(overlay, (0,0))
 
-    # --- FUNGSI MENGGAMBAR UI ---
     def draw_hud(self):
-        draw_panel(SCREEN, pygame.Rect(10, 10, 240, 130), border=True)
+        # --- KONFIGURASI LAYOUT (Variable biar mudah di-tweak) ---
+        panel_x, panel_y = 10, 10
+        panel_w, panel_h = 240, 150  # Tinggi panel ditambah jadi 150 biar lega
+        
+        # Batas untuk Rata Kanan (Right Anchor)
+        right_anchor_x = panel_x + panel_w - 15 
+        left_anchor_x = panel_x + 15
+        
+        # Gambar Panel Background
+        draw_panel(SCREEN, pygame.Rect(panel_x, panel_y, panel_w, panel_h), border=True)
+        
         hour = int((self.game_time // 60) % 24)
         minute = int(self.game_time % 60)
         
-        draw_text_shadow(SCREEN, f"{hour:02}:{minute:02}", FONT_BIG, 25, 20, C_ACCENT_GOLD)
-        draw_text_shadow(SCREEN, f"Day {GAME_STATS.day}", FONT_BOLD, 120, 25, C_TEXT_WHITE)
-        draw_text_shadow(SCREEN, f"{GAME_STATS.gold} G", FONT_BOLD, 180, 25, C_ACCENT_GOLD)
+        # --- LOGIKA RATA KANAN (RIGHT ALIGN) ---
+        # Kita hitung lebar teks agar posisi X menyesuaikan panjang angka
         
-        draw_bar_fancy(SCREEN, 25, 60, 210, 12, GAME_STATS.hp, GAME_STATS.max_hp, C_BAR_HP, "HP")
-        draw_bar_fancy(SCREEN, 25, 85, 210, 12, GAME_STATS.stamina, GAME_STATS.max_stamina, C_BAR_STAMINA, "STM")
-        draw_bar_fancy(SCREEN, 25, 110, 210, 12, GAME_STATS.hunger, GAME_STATS.max_hunger, C_BAR_HUNGER, "HGR")
+        txt_day = f"Day {GAME_STATS.day}"
+        w_day, h_day = FONT_BOLD.size(txt_day)
+        
+        txt_gold = f"{GAME_STATS.gold}G"
+        w_gold, h_gold = FONT_BOLD.size(txt_gold) # Hitung lebar teks gold
+        
+        # --- BARIS 1: WAKTU & DAY ---
+        # Waktu (Kiri)
+        draw_text_shadow(SCREEN, f"{hour:02}:{minute:02}", FONT_BIG, left_anchor_x, panel_y + 10, C_ACCENT_GOLD)
+        
+        # Day (Kanan - Koordinat X dikurangi lebar teks)
+        draw_text_shadow(SCREEN, txt_day, FONT_BOLD, right_anchor_x - w_day, panel_y + 18, C_TEXT_WHITE)
+
+        # --- BARIS 2: LEVEL & GOLD ---
+        # Level (Kiri)
+        draw_text_shadow(SCREEN, f"Lv.{GAME_STATS.level}", FONT_BOLD, left_anchor_x, panel_y + 45, (100, 255, 255))
+        
+        # Gold (Kanan - Koordinat X dikurangi lebar teks)
+        draw_text_shadow(SCREEN, txt_gold, FONT_BOLD, right_anchor_x - w_gold, panel_y + 45, C_ACCENT_GOLD)
+        
+        # --- BARIS 3: STAT BARS (TURUNKAN LAGI) ---
+        # Sebelumnya mungkin di y+60 atau y+70, sekarang kita set ke y+85
+        # Ini memberikan ruang agar teks Gold tidak menabrak teks HP
+        bar_start_y = panel_y + 85 
+        gap = 20 # Jarak antar bar lebih rapat sedikit biar muat
+        
+        draw_bar_fancy(SCREEN, left_anchor_x, bar_start_y, 210, 12, GAME_STATS.hp, GAME_STATS.max_hp, C_BAR_HP, "HP")
+        draw_bar_fancy(SCREEN, left_anchor_x, bar_start_y + gap, 210, 12, GAME_STATS.stamina, GAME_STATS.max_stamina, C_BAR_STAMINA, "STM")
+        draw_bar_fancy(SCREEN, left_anchor_x, bar_start_y + (gap*2), 210, 12, GAME_STATS.hunger, GAME_STATS.max_hunger, C_BAR_HUNGER, "HGR")
 
         # --- UPDATE TAMPILAN QUEST ---
-        draw_panel(SCREEN, pygame.Rect(10, 150, 240, 80), border=True)
-        draw_text_shadow(SCREEN, "ACTIVE QUEST", FONT_BOLD, 120, 155, C_ACCENT_GOLD, center=True)
+        quest_panel_y = panel_y + panel_h + 8 
+        draw_panel(SCREEN, pygame.Rect(panel_x, quest_panel_y, panel_w, 80), border=True)
+        
+        # Header Quest
+        draw_text_shadow(SCREEN, "ACTIVE QUEST", FONT_BOLD, panel_x + (panel_w//2), quest_panel_y + 5, C_ACCENT_GOLD, center=True)
         
         quest = GAME_STATS.get_current_quest()
+        text_center_x = panel_x + (panel_w//2)
+        text_y = quest_panel_y + 30
+        
         if quest:
             q_txt = f"{quest.desc} ({quest.current_val}/{quest.target_val})"
-            draw_multiline_text_shadow(SCREEN, q_txt, FONT_UI_SMALL, 120, 180, 220, C_TEXT_WHITE, center=True)
+            draw_multiline_text_shadow(SCREEN, q_txt, FONT_UI_SMALL, text_center_x, text_y, 220, C_TEXT_WHITE, center=True)
         elif GAME_STATS.is_generating_quest:
-            draw_text_shadow(SCREEN, "Mencari quest baru...", FONT_UI_SMALL, 120, 190, (100, 255, 255), center=True)
+            draw_text_shadow(SCREEN, "Mencari quest baru...", FONT_UI_SMALL, text_center_x, text_y + 10, (100, 255, 255), center=True)
         else:
-            draw_text_shadow(SCREEN, "Kosong (Tidak ada Quest)", FONT_UI_SMALL, 120, 190, C_TEXT_GREY, center=True)
+            draw_text_shadow(SCREEN, "Kosong (Tidak ada Quest)", FONT_UI_SMALL, text_center_x, text_y + 10, C_TEXT_GREY, center=True)
 
     def draw_control_guide(self, surface):
         w, h = 180, 140
